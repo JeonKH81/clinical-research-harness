@@ -1,0 +1,70 @@
+# === PHI 보호 (강제 차단) ===
+# 데이터 파일은 절대 동기화/공유 금지
+workspace/*/input/*.csv
+workspace/*/input/*.parquet
+workspace/*/input/*.xlsx
+workspace/*/input/*.xls
+workspace/*/input/*.dta
+workspace/*/input/*.sav
+workspace/*/input/*.rdata
+workspace/*/input/*.RData
+workspace/*/input/*.feather
+
+# 환자 식별정보가 포함될 수 있는 파일
+**/raw_data/
+**/phi/
+**/*identified*
+**/*deidentified_pending*
+
+# === 분석 중간 산출물 (선택적 동기화 제외) ===
+# 결과는 동기화하나 중간 캐시는 제외
+**/__pycache__/
+**/.ipynb_checkpoints/
+**/.cache/
+**/cache/
+
+# === 환경/secrets ===
+.env
+.env.*
+*.key
+secrets.json
+api_keys.json
+
+# === Node.js (docx 생성용) ===
+node_modules/
+package-lock.json
+
+# === Python 빌드 산출물 ===
+*.pyc
+*.pyo
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+*.egg-info/
+
+# === 운영체제 ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === 에디터 ===
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# === 임시 파일 ===
+*.tmp
+*.bak
+*~
+
+# === GitHub 배포 정책 ===
+*.plugin
+node_modules/
+package*.json
+harness_engineering.pdf
+.DS_Store
+.Rhistory
+~$*
+build_*.js
+build_v*.js
