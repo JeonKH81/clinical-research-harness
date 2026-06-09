@@ -57,6 +57,35 @@ def load_input(path):
         return json.load(f)
 
 
+def validate_required(user_input):
+    """G2 정책: 잠금 전 필수 항목이 모두 채워졌는지 점검. 누락 목록 반환 (비어있으면 통과).
+
+    필수: 가설(P/E/O) + 효과크기 가정 + 1차 분석방법 + 공변량.
+    (comparator는 single-arm 연구가 있어 필수에서 제외)
+    """
+    missing = []
+    h = user_input.get("hypothesis")
+    if not isinstance(h, dict):
+        missing.append("hypothesis (객체)")
+    else:
+        for k in ("population", "exposure", "outcome_primary", "effect_size_assumption"):
+            if not h.get(k):
+                missing.append(f"hypothesis.{k}")
+        op = h.get("outcome_primary")
+        if isinstance(op, dict) and not op.get("name"):
+            missing.append("hypothesis.outcome_primary.name")
+
+    ap = user_input.get("analysis_plan")
+    if not isinstance(ap, dict):
+        missing.append("analysis_plan (객체)")
+    else:
+        if not ap.get("primary_method"):
+            missing.append("analysis_plan.primary_method")
+        if not ap.get("covariates"):
+            missing.append("analysis_plan.covariates")
+    return missing
+
+
 def lock(args):
     prereg_path = workspace_path(args.project, "phase2_hypothesis", "prereg.json")
     if os.path.exists(prereg_path):
@@ -65,6 +94,18 @@ def lock(args):
         sys.exit(2)
 
     user_input = load_input(args.hypothesis_input)
+
+    missing = validate_required(user_input)
+    if missing:
+        print("[ERROR] 사전등록 필수 항목 누락 — 잠금(기록) 거절:", file=sys.stderr)
+        for m in missing:
+            print(f"  - {m}", file=sys.stderr)
+        print("  G2 정책: 가설(P/E/O)·효과크기 가정·1차 분석방법·공변량이 모두 있어야 기록 가능합니다.",
+              file=sys.stderr)
+        print("  Phase 2(hypothesis-refiner)로 돌아가 누락 항목을 채운 뒤 다시 시도하십시오.",
+              file=sys.stderr)
+        sys.exit(2)
+
     prereg = {
         "prereg_id": user_input.get("prereg_id", f"{args.project}-001"),
         "version": 1,

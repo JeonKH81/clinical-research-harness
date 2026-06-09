@@ -170,10 +170,10 @@ python3 scripts/pubmed_query.py   '...query...'   --years 10 --max 100   --outpu
         ↓
 [8] research_opportunities.md 생성 (각 후보에 근거 PMID ≥1건)
         ↓
-[9] Citation 후처리 검증
-    - 모든 PMID를 PubMed esummary로 한 번 더 resolve
-    - 모든 DOI를 Crossref로 resolve
-    - 실패 시 자동 거절 + evolution_log 기록
+[9] Citation 후처리 검증 (verify_citations.py — 코드 강제)
+    - 생성된 research_opportunities.md의 모든 PMID/DOI를 esummary·Crossref로 resolve
+    - search_log.json 화이트리스트와 대조 (도구 검색 밖 인용 식별)
+    - 실패(환각) 인용 자동 거절 + evolution_log 기록 → citation_check.json
         ↓
 [10] G1 게이트 — 사용자에게 어느 gap을 추구할지 묻기
 ```
@@ -186,7 +186,8 @@ python3 scripts/pubmed_query.py   '...query...'   --years 10 --max 100   --outpu
 |---|---|---|
 | search_log.json | `workspace/{project}/phase1_lit/search_log.json` | 쿼리·시점·필터·결과 영구 기록 (재현용) |
 | research_opportunities.md | `workspace/{project}/phase1_lit/research_opportunities.md` | 9가지 카테고리 연구 기회 후보 + 근거 PMID |
-| citation_network.json (선택) | `workspace/{project}/phase1_lit/citation_network.json` | Semantic Scholar 인용망 |
+| citation_check.json | `workspace/{project}/phase1_lit/citation_check.json` | verify_citations.py 검증 결과 (각 인용 verified/FAILED) |
+| citation_network.json (선택) | `workspace/{project}/phase1_lit/citation_network.json` | Semantic Scholar 인용망 (v1 미구현 — 선택적 보강) |
 | evolution_log 추가 기록 | `workspace/{project}/evolution_log.md` | Phase 1 진입·완료, gap 선택 |
 
 ---
@@ -347,16 +348,34 @@ Phase 1 완료 시 사용자에게:
 
 ### pubmed_query.py
 ```bash
-python scripts/pubmed_query.py \
+# 근거수준 높은 유형 우선 (기본: SR/MA/RCT/Clinical Trial)
+python ${CLAUDE_PLUGIN_ROOT}/skills/lit-search/scripts/pubmed_query.py \
   "(\"primary PCI\"[Title/Abstract] AND \"multivessel\"[Title/Abstract])" \
   --years 5 \
-  --types "Systematic Review,Meta-Analysis,Randomized Controlled Trial" \
+  --output workspace/{project}/phase1_lit/search_log.json
+
+# B1 replication / B3 RWE / A population — 관찰연구·코호트 포함 폭넓은 검색
+python ${CLAUDE_PLUGIN_ROOT}/skills/lit-search/scripts/pubmed_query.py \
+  "(\"SYNTAX score\"[Title/Abstract] AND \"cohort\"[Title/Abstract])" \
+  --types none --years 0 \
   --output workspace/{project}/phase1_lit/search_log.json
 ```
-- PubMed E-utilities (esearch + efetch)
-- Rate limiting (3 req/sec without API key, 10 req/sec with NCBI_API_KEY)
-- 결과 캐싱 (재실행 시 동일 쿼리는 재사용 가능)
+- PubMed E-utilities (esearch + efetch). 정렬은 `--sort relevance`로 고정(재현성).
+- **`--types none`**: 출판유형 필터 비활성화 — 후향 코호트·관찰연구 선행연구를 찾을 때 필수 (기본 필터는 이들을 제외함).
+- **`--years 0`**: 연도 필터 없음 (landmark 연구·외부 검증 대상 점수 검색용).
+- Rate limiting (3 req/sec without API key, 10 req/sec with NCBI_API_KEY).
+- DOI는 ArticleId·ELocationID 양쪽에서 추출, 초록은 구조화 라벨·inline 마크업 보존.
+- SSL 가로채기 환경에서 인증서 오류 시: `SSL_CERT_FILE` 설정 또는 `HARNESS_INSECURE_SSL=1`(보안 약화) 안내.
 
-### Citation 후처리 검증
-출력 직전 모든 PMID/DOI를 한 번 더 PubMed/Crossref로 resolve하여 존재 확인.
-실패 시 해당 인용 자동 거절 + evolution_log에 어느 Agent/Skill이 환각했는지 기록.
+### verify_citations.py — Citation Grounding 코드 강제 (인용 환각 탐지)
+생성된 문서(`research_opportunities.md` 등)의 모든 PMID/DOI를 PubMed esummary·Crossref로 **실제 resolve**하여 존재하지 않는(환각) 인용을 탐지한다. Citation Grounding 정책의 코드 레벨 강제.
+
+```bash
+python ${CLAUDE_PLUGIN_ROOT}/skills/lit-search/scripts/verify_citations.py \
+  workspace/{project}/phase1_lit/research_opportunities.md \
+  --search-log workspace/{project}/phase1_lit/search_log.json \
+  --json workspace/{project}/phase1_lit/citation_check.json
+```
+- 종료 코드: `0` 통과 / `1` 환각 의심 인용 존재 / `2` 환경 오류(네트워크·SSL).
+- `--search-log` 지정 시 도구 검색 화이트리스트와 대조 — search_log 밖 PMID는 "사용자 입력 인용?"으로 표시, `--strict`면 실패 처리.
+- 실패 인용은 출력에서 제거 + `evolution_log`에 어느 Agent/Skill이 환각했는지 기록.

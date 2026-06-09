@@ -22,7 +22,7 @@ license: MIT
 연구계획서의 참고문헌은 Phase 1의 `search_log.json`에서 PMID 동반된 것만 사용합니다. 자유 생성 인용 금지.
 
 ### 3. Pre-reg Hash Linkage
-생성된 protocol과 prereg가 한 쌍임을 보장하기 위해 `irb_metadata.json`의 `linked_prereg_hash` 필드에 prereg의 SHA-256를 기록합니다. Phase 5 진입 시 statistician가 두 해시의 일관성을 함께 검증합니다.
+생성된 protocol과 prereg가 한 쌍임을 보장하기 위해 `irb_metadata.json`의 `linked_prereg_hash` 필드에 prereg의 SHA-256를 기록합니다. prereg가 이후 변경되면 해시가 어긋나므로, 사용자는 protocol이 어느 prereg 버전에 기반했는지 추적할 수 있습니다 (감사 트레일). 분석 하네스는 자체 `prereg_check.py`로 prereg 무결성을 검증합니다.
 
 ## 입력
 - `workspace/{project}/phase2_hypothesis/prereg.json` (잠긴 상태)
@@ -72,12 +72,15 @@ python ${CLAUDE_PLUGIN_ROOT}/skills/prereg-lock/scripts/lock.py verify --project
 
 생성된 .docx를 사용자가 검토 후 4가지 선택:
 
-| 선택 | irb_status | 다음 단계 |
+| 선택 | irb_status | 기록 후 |
 |---|---|---|
-| 승인 + IRB 제출 완료 | `submitted` → `approved` | IRB 번호 입력 후 Phase 4 |
+| 승인 + IRB 통과 | `approved` | IRB 번호·승인일 입력. 계획 하네스 종료, 분석 하네스로 인계 |
+| 신속심사 통과 | `expedited` | IRB 번호 입력. 인계 |
+| 면제 (exempt 또는 IRB 불필요) | `exempt` | 면제 사유 입력. 인계 |
+| 제출됨/미제출 | `submitted` / `pending_submission` | 상태 기록. 분석 진행은 IRB 무관·사용자 책임 |
 | 수정 필요 | 변동 없음 | 사용자가 .docx 직접 수정 후 재호출 |
-| 면제 (exempt review 또는 IRB 불필요) | `exempt` | 사유 입력 후 Phase 4 |
-| 중단 | `pending_submission` | Phase 4 진입 차단 |
+
+> 본 계획 하네스는 IRB 상태를 *기록*만 합니다. 데이터 분석(Phase 4–7)은 별도 `clinical-research-analysis` 플러그인이 **IRB 무관 독립 실행**합니다.
 
 ## IRB 정책 — 기록만, 분석 차단 없음
 
@@ -115,7 +118,7 @@ python ${CLAUDE_PLUGIN_ROOT}/skills/prereg-lock/scripts/lock.py verify --project
 | Citation 환각 (PMID 없는 인용) 시도 | **차단 (Citation Grounding 비타협)** — search_log.json 외 인용 거절 |
 | 사용자가 prereg.json 변경 후 Phase 3 재호출 | irb_metadata에 새 linked_prereg_hash, 이전 protocol stale 표시, 새 .docx 생성 |
 | irb_metadata.json 존재 + 사용자가 G3 응답 변경 | 자유 변경 허용 (informed-consent), submission_log에 변경 이력 추가 |
-| `irb_status`가 pending/submitted인데 Phase 4 진입 | 허용 (Phase 4 = 데이터 검증, IRB 승인 전에도 가능). Phase 5만 informed-consent override 게이트 |
+| `irb_status`가 pending/submitted인 상태로 분석 진행 | 허용 — 분석 하네스는 IRB 무관 독립 실행. IRB 책임은 사용자. (계획 하네스는 차단하지 않음) |
 
 ## 한계 명시 (의도된)
 

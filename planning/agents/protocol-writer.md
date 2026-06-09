@@ -79,10 +79,10 @@ python ${CLAUDE_PLUGIN_ROOT}/skills/prereg-lock/scripts/lock.py verify --project
 
 생성된 .docx를 사용자가 검토 후 다음 4지선다:
 
-1. **승인** → IRB 제출 정보 입력 후 Phase 4(Data Inspector) 진입
+1. **승인/신속심사** → IRB 번호·승인일 기록 → 계획 하네스 종료, 분석 하네스(`clinical-research-analysis`)로 인계
 2. **수정** → 사용자가 .docx를 직접 수정한 후 재호출
-3. **면제 신청** → IRB 면제 사유 기록 후 Phase 4 진입
-4. **중단** — 가설 또는 데이터 보완 필요 시
+3. **면제 신청** → IRB 면제 사유 기록 → 분석 하네스로 인계
+4. **제출됨/미제출/중단** → 상태 기록. 분석 진행 여부는 IRB 무관·사용자 책임
 
 **중요**: 본 계획 하네스는 IRB 상태를 *기록*만 합니다. 데이터 분석(분석 하네스)은 **IRB 무관 독립 실행**이며, IRB 책임은 전적으로 사용자에게 있습니다. `irb_status` 값은 이후 manuscript Methods의 윤리 섹션 보고용으로 사용됩니다.
 

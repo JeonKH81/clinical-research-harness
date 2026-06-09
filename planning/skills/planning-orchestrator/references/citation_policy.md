@@ -50,13 +50,15 @@ PubMed E-utilities, Semantic Scholar API, OpenAlex API가 직접 반환한 PMID/
 ### 1. 생성 시점 (실시간)
 literature-scout가 LLM 생성 텍스트에 PMID/DOI 패턴이 있으면 즉시 도구로 resolve.
 
-### 2. 출력 직전 (post-hoc)
-모든 출력 파일(`research_opportunities.md`, `feasibility_report.md`, `results.html` 등)을 스캔:
-- 모든 [PMID: \d+] 패턴 → PubMed esummary로 존재 확인
-- 모든 [DOI: ...] 패턴 → Crossref API로 resolve
-- 실패 시 자동 거절 + evolution_log 기록
+### 2. 출력 직전 (post-hoc) — `verify_citations.py`로 코드 강제
+생성 문서(`research_opportunities.md` 등)를 `lit-search/scripts/verify_citations.py`로 스캔:
+- 모든 `[PMID: \d+]` 패턴 → PubMed esummary로 존재 확인
+- 모든 `[DOI: ...]` 패턴 → Crossref API로 resolve
+- `--search-log`로 도구 검색 화이트리스트와 대조 (search_log 밖 인용 식별)
+- 실패(환각) 인용 자동 거절 + evolution_log 기록 (종료 코드 1)
+- (분석 하네스에서도 manuscript·peer-review 단계에서 동일 정책 적용)
 
-### 3. 사용자 검토 단계 (Phase 5 G5)
+### 3. 사용자 검토 게이트 (계획 G1 / 분석 G5·G6)
 사용자가 결과를 검토할 때, 모든 인용에 PMID/DOI 링크가 동반되어 있어야 함.
 링크 클릭으로 즉시 원문 확인 가능해야 함.
 
