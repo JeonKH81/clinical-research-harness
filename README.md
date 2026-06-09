@@ -1,102 +1,134 @@
-# Clinical Research Harness v1
+# Clinical Research Harness v2
 
 > 임상연구자의 인지부담을 분산시키는 AI 보조 골격
-> Phase 1–6 (문헌검색 → 가설 정제 → 연구계획서 → 데이터 검정 → 통계 분석 → manuscript draft)
+> **두 개의 하네스(플러그인)**로 구성 — 연구의 흐름(계획 → 분석)에 맞춰 분리
 
-**버전**: v1.0 (Draft)
+**버전**: v2.0
 **대상**: 후향적 관찰 코호트 (1차: PCI · 심혈관)
 **실행 환경**: Claude Code / Claude Desktop App (Cowork mode)
 
 ---
 
-## 빠른 시작
+## 두 하네스 구조
 
-### 1. 첫 사용 (이 폴더가 워크스페이스로 이미 열려 있다면)
+연구의 시점은 **IRB 승인**을 기준으로 자연스럽게 둘로 나뉩니다. 본 하네스도 이를 따라 두 플러그인으로 분리되어 있습니다.
 
-채팅창에 자연어로 시작하면 됩니다:
+| | **하네스 1 — 계획** (`clinical-research-planning`) | **하네스 2 — 분석·집필** (`clinical-research-analysis`) |
+|---|---|---|
+| 범위 | Phase 0–3 | Phase 4–7 |
+| 단계 | Intake → 문헌검색 → 가설/사전등록 → IRB 연구계획서 | 데이터 검정 → 통계분석 → 논문초안 → 투고 전 자체 동료검토 |
+| 게이트 | G0–G3 | G4–G7 |
+| 시점 | 데이터를 보기 **전** | IRB 승인/면제 **후** |
+| IRB | 상태를 *기록* | **무관 독립 실행** (책임은 사용자) |
+| 산출물 | `prereg.json`, `research_protocol.docx`, `irb_metadata.json` | `feasibility_report`, `results`, `manuscript_draft.docx`, `review_report.md` |
 
-```
-이 PCI 코호트로 다혈관 vs 단일혈관의 1년 MACE 비교 연구를 시작하고 싶다
-```
-
-Orchestrator가 자동으로 Phase 0(intake) → Phase 1(literature search)로 진행하며, 각 게이트에서 사용자 승인을 요청합니다.
-
-### 2. 새 프로젝트 시작
-
-```
-/skill clinical-research-orchestrator
-```
-
-또는 자연어로:
+두 하네스는 **같은 `workspace/{project}/` 폴더**를 공유하며, `prereg.json`·`search_log.json`을 핸드오프 산출물로 연결됩니다.
 
 ```
-새 임상연구 프로젝트를 시작하자, 주제는 ...
+계획 하네스 (Phase 0–3)                 분석 하네스 (Phase 4–7)
+─────────────────────────              ─────────────────────────
+Phase 0  Intake          G0            Phase 4  Data Inspector      G4
+Phase 1  Literature      G1            Phase 5  Statistician        G5
+Phase 2  Hypothesis/     G2            Phase 6  Manuscript Writer   G6
+         Pre-registration              Phase 7  Peer Reviewer       G7
+Phase 3  Protocol Writer G3                     (투고 전 자체 적대적 검토)
+   │                                       ▲
+   └── prereg.json + search_log + irb_metadata ──┘
+       (공유 workspace/{project}/)
 ```
 
 ---
 
-## 폴더 구조
+## 설치 (Claude Code 마켓플레이스)
+
+이 저장소는 두 플러그인을 담은 **마켓플레이스**입니다.
+
+```bash
+# 마켓플레이스 등록 (repo 루트)
+/plugin marketplace add JeonKH81/clinical-research-harness
+
+# 필요한 하네스 설치
+/plugin install clinical-research-planning@clinical-research-harness
+/plugin install clinical-research-analysis@clinical-research-harness
+```
+
+설치 후 스킬은 네임스페이스로 호출됩니다:
+- `clinical-research-planning:planning-orchestrator`
+- `clinical-research-analysis:analysis-orchestrator`
+
+대개는 자연어로 시작하면 orchestrator가 자동 호출됩니다:
 
 ```
-Clinical Research Harness/
-├── CLAUDE.md                          # 라우팅 규칙 + 강제 정책
-├── README.md                          # 이 파일
-├── Clinical_Research_Harness_v1_Design.docx   # 설계 문서
-│
-├── .claude/
-│   ├── agents/                        # Sub-agent 정의
-│   │   ├── literature-scout.md
-│   │   ├── hypothesis-refiner.md
-│   │   ├── protocol-writer.md
-│   │   ├── data-inspector.md
-│   │   ├── statistician.md
-│   │   └── manuscript-writer.md
-│   └── skills/                        # 스킬 정의
-│       ├── clinical-research-orchestrator/
-│       │   ├── SKILL.md               # 진입점, Phase 라우팅
-│       │   └── references/
-│       │       ├── STROBE_checklist.md
-│       │       ├── phase_gates.md
-│       │       └── citation_policy.md
-│       ├── lit-search/                # Phase 1
-│       ├── prereg-lock/               # Phase 2 (사전등록 잠금)
-│       ├── protocol-writer/           # Phase 3 (IRB 연구계획서)
-│       ├── data-inspect/              # Phase 4
-│       └── stat-analysis/             # Phase 5
-│
-└── workspace/                         # 프로젝트별 산출물
-    └── (프로젝트 폴더들)
-        └── (예) PCI-MVD-2026/
-            ├── input/                 # 데이터, 데이터 사전
-            ├── phase1_lit/
-            ├── phase2_hypothesis/
-            │   └── prereg.json        # LOCKED
-            ├── phase3_protocol/
-            │   ├── research_protocol.docx
-            │   └── irb_metadata.json
-            ├── phase4_data/
-            ├── phase5_analysis/
-            ├── phase6_manuscript/
-            │   ├── manuscript_draft.docx
-            │   ├── references.bib
-            │   ├── strobe_22_check.md
-            │   └── ai_disclosure.md
-            └── evolution_log.md
+이 PCI 코호트로 다혈관 vs 단일혈관의 1년 MACE 비교 연구를 시작하고 싶다   → 계획 하네스
+데이터 받았다. 사전등록한 가설로 분석 돌려줘                              → 분석 하네스
 ```
+
+---
+
+## 저장소 구조
+
+```
+clinical-research-harness/
+├── .claude-plugin/marketplace.json     # 두 플러그인 등록
+│
+├── planning/                           # 하네스 1 (플러그인)
+│   ├── .claude-plugin/plugin.json
+│   ├── skills/
+│   │   ├── planning-orchestrator/      # 진입점, Phase 0–3 라우팅, G0–G3
+│   │   │   └── references/{phase_gates.md, citation_policy.md}
+│   │   ├── lit-search/                 # Phase 1 (+ pubmed_query.py)
+│   │   ├── prereg-lock/                # Phase 2 사전등록 (+ lock.py)
+│   │   └── protocol-writer/            # Phase 3 IRB 연구계획서
+│   └── agents/
+│       ├── literature-scout.md
+│       ├── hypothesis-refiner.md
+│       └── protocol-writer.md
+│
+├── analysis/                           # 하네스 2 (플러그인)
+│   ├── .claude-plugin/plugin.json
+│   ├── skills/
+│   │   ├── analysis-orchestrator/      # 진입점, Phase 4–7 라우팅, G4–G7
+│   │   │   └── references/{phase_gates.md, STROBE_checklist.md, citation_policy.md}
+│   │   ├── data-inspect/               # Phase 4 (+ eda.py)
+│   │   ├── stat-analysis/              # Phase 5 (+ run_analysis.py, prereg_check.py)
+│   │   ├── manuscript-writer/          # Phase 6 IMRaD 초안
+│   │   └── peer-review/                # Phase 7 자체 동료검토 (신규)
+│   └── agents/
+│       ├── data-inspector.md
+│       ├── statistician.md
+│       ├── manuscript-writer.md
+│       └── peer-reviewer.md            # 신규
+│
+└── workspace/                          # 프로젝트별 산출물 (두 하네스 공유)
+    └── {project}/
+        ├── input/                      # 데이터 (PHI 포함 시 동기화 제외)
+        ├── phase1_lit/ … phase3_protocol/    # 계획 하네스
+        ├── phase4_data/ … phase7_review/     # 분석 하네스
+        └── evolution_log.md            # 두 하네스 공통 로그
+```
+
+---
+
+## 3대 비타협 정책 (우회 불가)
+
+1. **Citation Grounding** — 모든 인용은 도구가 반환한 PMID/DOI 또는 사용자 명시 입력만. 자유 생성 인용 거절. (계획: lit-search / 분석: manuscript·peer-review)
+2. **PHI 행 비전송** — 개별 환자 row는 어떤 경우에도 LLM 컨텍스트로 전달되지 않음. 직접 식별자(실명·생년월일·주민번호) 자동 마스킹. (분석: data-inspect)
+3. **effect size + 95% CI 강제** — p-value 단독 보고 거절. (분석: stat-analysis)
+
+그 외 IRB·HARKing은 informed-consent + 자동 로깅 모델 (차단 아님). 특히 **분석 하네스는 IRB 무관 독립 실행**이며 IRB 책임은 전적으로 사용자에게 있습니다.
 
 ---
 
 ## ⚠️ PHI 데이터 처리 — 매우 중요
 
-이 폴더는 Dropbox/iCloud 등 클라우드 동기화 폴더일 가능성이 높습니다.
+이 폴더는 Dropbox/iCloud 등 클라우드 동기화 폴더일 수 있습니다.
 **환자 식별정보(PHI)가 포함된 데이터는 이 폴더 안에 두지 마십시오.**
 
-### 권장 운용
+권장 운용:
+- **이 폴더**: 스킬 정의, 분석 코드, 사전등록 파일, 결과 표/그림 (PHI 미포함)
+- **별도 로컬 폴더** (동기화 제외): 원본 환자 데이터
 
-- **이 폴더**: 스킬 정의, 설계 문서, 분석 코드, 사전등록 파일, 결과 표/그림 (PHI 미포함)
-- **별도 로컬 폴더** (예: `~/Research/clinical-data/`, 동기화 제외): 원본 환자 데이터
-
-`workspace/{project}/input/data.csv`는 **로컬 폴더의 데이터에 대한 심볼릭 링크**로 두시는 것을 권장합니다:
+`workspace/{project}/input/data.csv`는 로컬 데이터에 대한 **심볼릭 링크**를 권장합니다:
 
 ```bash
 ln -s ~/Research/clinical-data/PCI-MVD-2026/data.csv \
@@ -107,83 +139,14 @@ ln -s ~/Research/clinical-data/PCI-MVD-2026/data.csv \
 
 ---
 
-## 사용 흐름 (예시)
+## 범위 — 명시적 비포함
 
-```
-[교수님] PCI 코호트로 다혈관 vs 단일혈관의 1년 MACE 비교 연구를 시작하고 싶다.
-
-[하네스] Phase 0 — Intake
-       연구 주제, 대상 환자군, 데이터 위치, IRB 승인 상태 확인 중...
-       G0 게이트: 다음 3항목을 확인해 주십시오:
-         1. 본 데이터 사용은 IRB 승인 범위 내입니까?
-         2. PHI 외부 전송 차단 정책에 동의하십니까?
-         3. 학술적 책임은 본인(연구자)에게 있음을 이해하십니까?
-
-[교수님] 모두 예
-
-[하네스] Phase 1 — Literature Scout
-       PubMed에서 "primary PCI" AND "multivessel disease" AND "MACE"...
-       총 247건, 최근 5년 systematic review 12건, RCT 6건...
-       9가지 카테고리 연구 기회를 식별했습니다:
-         A. 새 영역(Gap): A1-A4 (4건)
-         B. 기존 연구 재검토: B1 Replication 1건, B2 Validation 2건,
-                              B3 RWE 1건, B4 Subgroup 1건
-         C. 업데이트: C1 (1건)
-       G1 게이트: 어느 후보를 추구하시겠습니까?
-
-[교수님] B1 — SYNTAX-II Trial을 분당서울대 PCI 코호트에서 재현
-
-[하네스] Phase 2 — Hypothesis Refiner
-       PECO 형식으로 가설 후보 3개를 제시합니다 [표 출력]
-       G2 게이트: 가설 1번을 기록하시겠습니까? 기록 후 자유 변경 가능, 변경 사실은 evolution_log에 자동 기록됩니다.
-
-[교수님] 잠가줘
-
-[하네스] prereg.json 기록 완료 (SHA-256: a3f5c8..., 자유 변경 가능)
-       Phase 3 — Protocol Writer
-       잠긴 사전등록 + Phase 1 문헌을 IRB 연구계획서로 변환 중...
-       research_protocol.docx 생성 완료
-       G3 게이트: IRB 제출 상태를 알려주세요 (제출 예정/제출됨/승인됨/면제/중단)
-
-[교수님] 면제 — 후향적 익명화 데이터, BRIA 면제 신청 예정
-
-[하네스] irb_status=exempt 기록. Phase 4 — Data Inspector
-       데이터 스키마 분석 중...
-       (Phase 4·5 진행 후)
-
-[하네스] Phase 6 — Manuscript Writer
-       Phase 1–5 산출물 통합해 IMRaD draft 생성 중...
-       manuscript_draft.docx 생성 완료
-       STROBE 22항목 점검 완료 (누락 항목은 입력 요청)
-       ICMJE AI disclosure 자동 생성
-       G6 게이트: 검토 후 finalize 또는 수정 요청
-```
-
-📝 **v1.0 종료**: Phase 7(peer review)·Phase 8(revision)은 본 하네스 범위 밖. 사용자 직접 처리.
+- **Phase 8 (Revision · 실제 심사 대응)**: 학술지 reviewer comment에 대한 rebuttal·재투고. Phase 7의 *자체* 동료검토(투고 전 리허설)와 달리, 실제 심사 대응은 본 하네스 범위 밖 — 사용자 직접 처리.
+- "임상적 가치 판단"은 항상 사용자에게 위임 (LLM 약점 영역).
 
 ---
 
-## v1.0 범위 — 명시적 비포함
-
-다음은 본 하네스 범위 **밖**으로 명시적 결정. 사용자가 직접 또는 외부 도구로 처리:
-
-- **Phase 7 (Peer Review)**: 학술지 동료심사 또는 사용자 자체 동료 검토
-- **Phase 8 (Revision · response-to-reviewer)**: 동료심사 후 응답·재투고
-
-이 두 단계는 *학술적 가치 판단·동료와의 협력*이 핵심이라, 자동화하기보다 사용자가 본인 학술 책임으로 처리하는 것이 합리적이라는 결정.
-
----
-
-## 문제가 발생하면
-
-- 인용 환각이 의심되면: 모든 인용에 PMID/DOI가 있는지 확인. 없으면 `lit-search` 재호출.
-- 가설을 바꾸고 싶을 때 (Phase 2 이후): 자유롭게 변경 가능 (evolution_log 자동 기록). 정식 변경 사유 기록을 원하면 "가설 amendment 신청" 입력.
-- 분석 결과가 사전등록과 다른 경우: 자동으로 `exploratory` 섹션으로 분리됩니다.
-- PHI 노출이 의심되면: 즉시 `evolution_log.md`에 기록하고 데이터 파일을 안전한 위치로 이동.
-
-## Evidence 등급 안내
-
-본 하네스는 LLM이 잘하는 영역(절차적 작업, 코드 실행, 형식 준수)과 약한 영역(임상적 가치 판단, 선택편향 탐지, 인과추론)을 구분하여 설계되었습니다.
-약한 영역은 모두 Human-in-the-loop 게이트로 사용자에게 위임됩니다.
-
-자세한 근거는 `Clinical_Research_Harness_v1_Design.docx` 부록 C 참고.
+## 참고
+- 설계 문서: `Clinical_Research_Harness_v1_0_Final.docx`
+- 원본 하네스 개념: [jikime/harness-lab](https://github.com/jikime/harness-lab) (카카오 황민호 님 원본 [revfactory/harness](https://github.com/revfactory/harness) 기반)
+- 보고 가이드: STROBE (관찰연구)

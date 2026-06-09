@@ -1,0 +1,23 @@
+{
+  "name": "clinical-research-planning",
+  "version": "2.0.0",
+  "description": "임상연구 계획 하네스 (Phase 0–3): Intake → 문헌검색(PubMed, Citation Grounding) → 가설 PICO/PECO 정제·사전등록(SHA-256) → IRB 제출용 한국어 연구계획서(.docx). Human-in-the-loop 게이트 G0–G3.",
+  "author": {
+    "name": "Jeon Kihyun (전기현)",
+    "email": "imcardio@gmail.com"
+  },
+  "homepage": "https://github.com/JeonKH81/clinical-research-harness",
+  "repository": "https://github.com/JeonKH81/clinical-research-harness",
+  "license": "MIT",
+  "keywords": [
+    "clinical-research",
+    "cardiology",
+    "literature-search",
+    "pubmed",
+    "pre-registration",
+    "IRB",
+    "protocol",
+    "PICO",
+    "STROBE"
+  ]
+}
