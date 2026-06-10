@@ -15,9 +15,12 @@ model: sonnet
 - (선택) 데이터 사전: `workspace/{project}/input/data_dictionary.md`
 
 ## 출력
-- `workspace/{project}/phase4_data/feasibility_report.md`
-- `workspace/{project}/phase4_data/missing_pattern.png`
-- `workspace/{project}/phase4_data/data_dag.png` (사용자 검토용 DAG 후보)
+- `workspace/{project}/phase4_data/feasibility_report.md` / `.json` (eda.py — verdict·매핑·EPV·이벤트율·PHI)
+- `workspace/{project}/phase4_data/variable_mapping.json` (eda.py — Phase 5 입력)
+- EDA 리포트 HTML — `anthropic-skills:clinical-eda-report` 위임 (결측·MCAR·VIF·이상치·분포)
+
+## 위임
+전체 EDA(결측 패턴·Little's MCAR·VIF·이상치·분포·상관)는 `anthropic-skills:clinical-eda-report`에 위임합니다. eda.py는 사전등록 대비 *feasibility 판정*(매핑·EPV·이벤트율·verdict)에 집중합니다.
 
 ## 핵심 정책 — PHI 보호 (Soft 마스킹 + 행 비전송 비타협)
 
@@ -37,8 +40,7 @@ LLM이 보는 것은: 컬럼명(자동 마스킹 후) · 요약 통계 · 결측
 사전등록의 P, E, C, O 변수를 데이터 컬럼에 매핑.
 누락된 핵심 변수 식별 → 사용자에게 보고.
 
-### 2. EDA
-스크립트 호출:
+### 2. Feasibility 점검 (eda.py)
 ```bash
 python ${CLAUDE_PLUGIN_ROOT}/skills/data-inspect/scripts/eda.py \
   --data workspace/{project}/input/data.csv \
@@ -46,12 +48,14 @@ python ${CLAUDE_PLUGIN_ROOT}/skills/data-inspect/scripts/eda.py \
   --out workspace/{project}/phase4_data/
 ```
 
-### 3. 자동 탐지 항목 (강한 근거)
-- 결측 패턴 (Little's MCAR test)
-- 이상치 (z-score > 3, IQR-based)
-- 다중공선성 (VIF > 10)
-- 불균형 노출/결과 (이벤트율 < 5% 시 경고)
-- 표본 크기 vs 변수 수 (Peduzzi rule, EPV ≥ 10)
+### 2-1. 전체 EDA 위임
+```
+Skill: anthropic-skills:clinical-eda-report   (data.csv)
+```
+
+### 3. 자동 탐지 항목
+**eda.py (feasibility):** 이벤트율(<5% 경고) · EPV(Peduzzi ≥10) · 핵심 변수 매핑
+**clinical-eda-report (위임):** 결측 패턴·Little's MCAR · 이상치(z>3/IQR) · 다중공선성(VIF>10) · 분포·상관
 
 ### 4. Verdict 산출
 
@@ -67,9 +71,7 @@ python ${CLAUDE_PLUGIN_ROOT}/skills/data-inspect/scripts/eda.py \
 - **선택 편향**: 등록 기준의 비기록 편향, referral pattern
 - **측정 편향**: 결과 평가의 비맹검
 - **교란 누락**: 데이터에 없는 중요 공변량
-- **Collider 위험**: DAG 검토 필요 (예: M-bias, Cole et al. IJE 2010)
-
-DAG 후보를 `data_dag.png`로 출력하여 사용자 검토를 요청합니다.
+- **Collider 위험**: DAG 검토 필요 (예: M-bias, Cole et al. IJE 2010) — 사용자/도메인 지식 기반 검토 (자동 생성 아님)
 
 ## 게이트 G4 인계
 

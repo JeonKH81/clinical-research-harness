@@ -24,7 +24,7 @@ license: MIT
 LLM이 자유 생성하는 영역을 최소화:
 - **Introduction**: search_log의 PMID/DOI 인용 + research_opportunities의 gap 진술 그대로
 - **Methods**: prereg.json + irb_metadata + variable_mapping (필드 매핑)
-- **Results**: Phase 5 results.json/xlsx (수치는 LLM이 다시 쓰지 않음)
+- **Results**: Phase 5 위임 스킬 결과(표·HR/OR+CI) + corrected_pvalues.json (수치는 LLM이 다시 쓰지 않음)
 - **References**: search_log + 사용자 명시 PMID만
 - **Discussion·Limitations**: 일부 자유 서술 허용하되 사용자 검토 필수
 
@@ -57,14 +57,14 @@ Phase 5의 strobe_checklist.md를 manuscript에 매핑. 누락 항목 (예: Fund
 [4] 섹션별 자동 채움 (모두 grounded)
     Introduction: search_log 인용 + research_opportunities gap
     Methods: prereg + irb_metadata + variable_mapping
-    Results: Phase 5 results.json/xlsx (수치 그대로)
+    Results: Phase 5 위임 스킬 결과 + corrected_pvalues.json (수치 그대로)
     References: search_log + 사용자 PMID
         ↓
 [5] STROBE 22항목 점검표 첨부 + 누락 항목 사용자 입력 요구
         ↓
 [6] ICMJE AI disclosure 자동 생성 (ai_disclosure.md → manuscript에 삽입)
         ↓
-[7] Citation 후처리 검증 (모든 PMID/DOI를 search_log와 대조)
+[7] Citation 후처리 검증 — verify_citations.py (manuscript 텍스트/references를 esummary·Crossref로 resolve + search_log 대조)
         ↓
 [8] G6 게이트 — 사용자 검토 (Discussion 임상 함의·STROBE 누락·저자 기여 등)
 ```
@@ -79,6 +79,7 @@ Phase 5의 strobe_checklist.md를 manuscript에 매핑. 누락 항목 (예: Fund
 | references.bib | `phase6_manuscript/references.bib` | BibTeX 참고문헌 |
 | strobe_22_check.md | `phase6_manuscript/strobe_22_check.md` | STROBE 22항목 점검표 |
 | ai_disclosure.md | `phase6_manuscript/ai_disclosure.md` | ICMJE AI 사용 명시 |
+| citation_check.json | `phase6_manuscript/citation_check.json` | verify_citations.py 인용 검증 결과 |
 
 ---
 
@@ -95,11 +96,11 @@ Phase 5의 strobe_checklist.md를 manuscript에 매핑. 누락 항목 (예: Fund
 | `prereg.analysis_plan.sensitivity` | Methods 5.1. 민감도 분석 |
 | `irb_metadata` (irb_status, irb_number) | Methods 6. 윤리 |
 | `prereg.data_provenance` | Methods 7. 자료 출처 |
-| Phase 5 `results.xlsx` Table 1 | Results 1. Baseline |
-| Phase 5 `results.json` primary | Results 2. Primary outcome |
-| Phase 5 `results.json` secondary | Results 3. Secondary outcomes |
-| Phase 5 `results.json` sensitivity | Results 4. Sensitivity |
-| Phase 5 diagnostics/ | Results 5. Diagnostics |
+| clinical-table1 출력 (Table 1) | Results 1. Baseline |
+| survival-analysis / logistic 결과 (primary) + corrected_pvalues.json | Results 2. Primary outcome |
+| 위임 스킬 결과 (secondary) | Results 3. Secondary outcomes |
+| 위임 스킬 민감도 결과 | Results 4. Sensitivity |
+| 위임 스킬 진단 (Schoenfeld·calibration 등) | Results 5. Diagnostics |
 | Phase 4 `feasibility_report.md`의 사용자 검토 4항목 | Discussion → Limitations |
 | `search_log.json` 모든 인용 | References |
 | evolution_log.md 요약 | ai_disclosure.md |
@@ -112,7 +113,7 @@ Phase 5의 strobe_checklist.md를 manuscript에 매핑. 누락 항목 (예: Fund
 |---|---|
 | Phase 1–5 산출물 누락 | 차단, 누락 Phase로 환원 |
 | LLM이 자유 생성 인용 시도 | **차단 (Citation Grounding 비타협)** |
-| LLM이 prereg 외 분석 결과 자유 생성 | **차단** — Results는 results.json/xlsx에서만 |
+| LLM이 prereg 외 분석 결과 자유 생성 | **차단** — Results 수치는 위임 스킬 결과·corrected_pvalues.json에서만 |
 | Discussion에서 환각 의심 (인용 없는 임상 주장) | 경고 + 사용자 검토 강제 + LLM 작성 영역 명시 |
 | ICMJE AI disclosure 누락 | 차단, 자동 생성 강제 |
 | AI를 저자 목록에 포함 시도 | 차단 (ICMJE 정책 위반) |

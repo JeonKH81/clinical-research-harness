@@ -20,7 +20,7 @@ license: MIT
 이것은 **리허설**이다. 실제 학술지 동료심사를 대체하지 않으며, 실제 reviewer comment에 대한 rebuttal 작성(투고 후 revision)은 본 하네스 범위 밖이다.
 
 - **적대적 기본값(adversarial by default)**: reviewer는 호의적으로 읽지 않는다. "이 논문을 reject할 이유"를 능동적으로 찾는다. 불확실하면 "약점 있음" 쪽으로 기운다.
-- **근거 기반 비판(grounded critique)**: 모든 지적은 원고의 구체적 위치(섹션·표·문장)나 분석 산출물(results.json, feasibility_report.md)을 근거로 한다. 막연한 "더 잘 쓰라"는 금지.
+- **근거 기반 비판(grounded critique)**: 모든 지적은 원고의 구체적 위치(섹션·표·문장)나 분석 산출물(governance.json·corrected_pvalues.json·위임 스킬 결과, feasibility_report.md)을 근거로 한다. 막연한 "더 잘 쓰라"는 금지.
 - **건설적 종결(constructive close)**: 각 major 코멘트는 *구체적 수정 방향*을 함께 제시한다.
 - **Citation Grounding 계승(비타협)**: reviewer가 비교·반론용으로 인용을 들 때도 PMID/DOI 없는 자유 생성 인용은 금지. search_log.json 또는 사용자 입력 인용만.
 
@@ -62,14 +62,21 @@ license: MIT
 - 인용된 논문이 실제로 그 주장을 지지하는가? (과대 인용·오인용 의심 표시)
 - 모든 인용에 PMID/DOI가 있는가? (없으면 환각 의심 — 비타협 거절)
 - 자기 인용·인용 누락(중요 반대 근거 누락)은 없나?
+- **코드 검증**: 원고 인용을 `manuscript-writer/scripts/verify_citations.py`로 실제 resolve:
+  ```bash
+  python ${CLAUDE_PLUGIN_ROOT}/skills/manuscript-writer/scripts/verify_citations.py \
+    workspace/{project}/phase6_manuscript/manuscript_refs.txt \
+    --search-log workspace/{project}/phase1_lit/search_log.json
+  ```
+  실패(환각) 인용은 major 코멘트로 기록.
 
 ---
 
 ## 구동 과정 (7단계)
 
 ```
-[1] 입력 수집 — manuscript_draft.docx (또는 .md), prereg.json, results.json,
-    feasibility_report.md, strobe checklist, search_log.json
+[1] 입력 수집 — manuscript_draft.docx (또는 .md), prereg.json, governance.json,
+    corrected_pvalues.json + 위임 스킬 결과, feasibility_report.md, strobe_checklist.md, search_log.json
         ↓
 [2] 사전등록 무결성 자체 검증 (prereg_check.py, 드리프트 시 경고만)
         ↓
@@ -115,7 +122,7 @@ license: MIT
 
 ### [MAJOR-1] (R1 방법·통계) — Results 2절, Table 3
 **문제**: Cox 모델 PH 가정 검정(Schoenfeld) 결과가 보고되지 않음.
-**근거**: results.json에 schoenfeld 항목 없음; STROBE item 12 미충족.
+**근거**: survival-analysis 진단에 Schoenfeld(PH 가정) 보고 없음; STROBE item 12 미충족.
 **수정 방향**: PH 가정 검정 추가, 위반 시 stratified Cox 또는 time-varying coefficient. (→ Phase 5)
 
 ### [MAJOR-2] (R4 인과·편향) — Discussion 3문단

@@ -45,15 +45,15 @@ Phase 5 분석을 위한 변수 매핑·결측 처리 방안·자료 정의를 P
 [3] 변수 매핑: prereg의 P/E/C/O를 데이터 컬럼에 매핑
     핵심 변수 누락 → 사용자 알림
         ↓
-[4] EDA 자동 실행 (eda.py)
-    - 결측 패턴 (Little's MCAR test)
-    - 이상치 (z-score > 3, IQR-based)
-    - 다중공선성 (VIF > 10)
-    - 이벤트율 (< 5% 시 경고)
+[4a] Feasibility 점검 (eda.py — 사전등록 특화)
+     - 변수 매핑 (P/E/C/O + time_to_outcome)
+     - 이벤트율 (< 5% 시 경고 — 희귀 결과)
+     - EPV (Peduzzi) + 검정력
+[4b] 전체 EDA 위임 → Skill: anthropic-skills:clinical-eda-report
+     - 결측 패턴·Little's MCAR·VIF·이상치·분포 플롯·상관 heatmap (HTML 한 파일)
         ↓
 [5] 검정력 계산 (Peduzzi rule + prereg 효과 크기 가정)
     - EPV (events per variable) ≥ 10 / < 10 / < 5
-    - power ≥ 0.8 / 0.5–0.8 / < 0.5
         ↓
 [6] Verdict 산출 (testable / partially testable / not testable)
     + 데이터 SHA-256 계산 → prereg.data_provenance.data_file_hash 채움
@@ -62,8 +62,7 @@ Phase 5 분석을 위한 변수 매핑·결측 처리 방안·자료 정의를 P
     - 선택 편향 (referral pattern)
     - 측정 편향 (비맹검 outcome)
     - 교란 누락 (데이터에 없는 공변량)
-    - Collider 위험 (DAG 검토)
-    DAG 후보 자동 생성 → data_dag.png
+    - Collider 위험 (DAG 검토 — 사용자/도메인 지식 필요)
         ↓
 [8] G4 게이트 — verdict + 사용자 검토 응답 + 진행 결정 4지선다
 ```
@@ -85,7 +84,7 @@ Phase 5 분석을 위한 변수 매핑·결측 처리 방안·자료 정의를 P
 
 **WARN 정책 (차트번호·주소·전화·이메일 등)**: 후향 코호트에서 차트번호는 추적용으로 의도적으로 사용되는 경우가 많고, 주소(시·도 단위)는 지역 분석에 사용 가능. 따라서 자동 차단보다 사용자 인지 확인 후 본인 책임으로 진행. 행 단위 데이터는 LLM에 전달 안 되므로 LLM 노출 위험은 여전히 차단됨.
 
-**사용자 책임 영역**: 본 하네스 출력물(.docx, .xlsx, results.html 등)을 외부에 공유 시 차트번호·주소 같은 컬럼이 포함되지 않도록 사용자가 명시적으로 점검 (특히 학회 발표·논문 보충자료).
+**사용자 책임 영역**: 본 하네스 출력물(.docx, .xlsx, HTML 리포트 등)을 외부에 공유 시 차트번호·주소 같은 컬럼이 포함되지 않도록 사용자가 명시적으로 점검 (특히 학회 발표·논문 보충자료).
 
 ## 입력
 - `workspace/{project}/phase2_hypothesis/prereg.json` (잠긴 사전등록)
@@ -93,10 +92,13 @@ Phase 5 분석을 위한 변수 매핑·결측 처리 방안·자료 정의를 P
 - (선택) `workspace/{project}/input/data_dictionary.md`
 
 ## 출력
-- `workspace/{project}/phase4_data/feasibility_report.md` — 주 보고서
-- `workspace/{project}/phase4_data/missing_pattern.png` — 결측 패턴 시각화
-- `workspace/{project}/phase4_data/data_dag.png` — DAG 후보 (사용자 검토용)
-- `workspace/{project}/phase4_data/variable_mapping.json` — 가설 변수 ↔ 데이터 컬럼 매핑
+| 산출물 | 생성 주체 | 의미 |
+|---|---|---|
+| `phase4_data/feasibility_report.md` / `.json` | eda.py | verdict·매핑·EPV·이벤트율·PHI 보고 (주 보고서) |
+| `phase4_data/variable_mapping.json` | eda.py | 가설 변수 ↔ 데이터 컬럼 매핑 (Phase 5 입력) |
+| EDA 리포트 (HTML) | `anthropic-skills:clinical-eda-report` | 결측·MCAR·VIF·이상치·분포·상관 |
+
+> 결측 패턴 시각화·VIF·이상치·MCAR 등 **전체 EDA는 clinical-eda-report에 위임**합니다. eda.py는 사전등록 대비 *feasibility 판정*에 집중합니다.
 
 ## 절차
 
@@ -108,9 +110,9 @@ python ${CLAUDE_PLUGIN_ROOT}/skills/stat-analysis/scripts/prereg_check.py --proj
 ### 2. 변수 매핑
 prereg.json의 P, E, C, O 변수를 데이터 컬럼에 매핑. 누락된 핵심 변수는 명시적 경고.
 
-### 3. EDA 실행
+### 3. Feasibility 점검 (eda.py)
 ```bash
-python scripts/eda.py \
+python ${CLAUDE_PLUGIN_ROOT}/skills/data-inspect/scripts/eda.py \
   --data workspace/{project}/input/data.csv \
   --prereg workspace/{project}/phase2_hypothesis/prereg.json \
   --out workspace/{project}/phase4_data/
@@ -118,14 +120,26 @@ python scripts/eda.py \
 
 ### 4. 자동 탐지 항목
 
+**eda.py (사전등록 특화 feasibility):**
+
 | 항목 | 기준 | 결과 처리 |
 |---|---|---|
-| 결측 패턴 | Little's MCAR test | p<0.05면 MCAR 가정 위반 보고 |
-| 이상치 | IQR-based, z>3 | 개수 보고, 검토 권고 |
-| 다중공선성 | VIF | VIF>10 시 경고 |
-| 이벤트율 | 결과 변수 발생률 | <5% 시 경고 |
-| 검정력 | prereg의 effect size 가정으로 계산 | <0.8 시 경고, <0.5 시 not testable 후보 |
+| 이벤트율 | 결과 변수 발생률 | <5% 시 경고 (희귀 결과 — Firth/exact 고려) |
 | Peduzzi rule | EPV = events / covariates | <10 시 경고, <5 시 not testable 후보 |
+| 핵심 변수 매핑 | exposure·outcome·time_to_outcome 존재 | 누락 시 not testable 후보 |
+
+**clinical-eda-report (위임 — 전체 EDA):**
+
+| 항목 | 비고 |
+|---|---|
+| 결측 패턴·Little's MCAR | HTML 리포트 |
+| 이상치 (IQR / z>3) | implausible value 감지 |
+| 다중공선성 (VIF>10) | 상관 heatmap 동반 |
+| 분포 플롯·변수별 요약 | n·타입별 |
+
+```
+Skill: anthropic-skills:clinical-eda-report   (data.csv 업로드)
+```
 
 ### 5. Verdict 산출
 

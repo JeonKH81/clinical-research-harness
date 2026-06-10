@@ -121,6 +121,24 @@ def map_variables(prereg, columns):
     return mapping
 
 
+def count_events(s):
+    """이진 결과변수의 event 수를 견고하게 계산. 정의 불명확하면 None."""
+    import pandas as pd
+    sc = s.dropna()
+    if len(sc) == 0:
+        return None
+    if pd.api.types.is_bool_dtype(sc):
+        return int(sc.sum())
+    if pd.api.types.is_numeric_dtype(sc):
+        return int(sc.sum()) if set(pd.unique(sc)) <= {0, 1} else None
+    pos = {"1", "yes", "y", "true", "positive", "pos", "event",
+           "dead", "death", "case"}
+    neg = {"0", "no", "n", "false", "negative", "neg",
+           "alive", "control", "censored"}
+    low = sc.astype(str).str.strip().str.lower()
+    return int(low.isin(pos).sum()) if set(low.unique()) <= (pos | neg) else None
+
+
 def power_check(n, events, n_covariates):
     """Peduzzi rule (EPV ≥ 10) 점검."""
     epv = events / max(n_covariates, 1)
@@ -187,13 +205,15 @@ def main():
     outcome_col = mapping.get("outcome_primary")
     n = int(len(df_safe))
     events = None
+    event_rate = None
     if outcome_col and outcome_col in df_safe.columns:
-        try:
-            events = int(df_safe[outcome_col].sum())
-        except Exception:
-            events = None
+        events = count_events(df_safe[outcome_col])
+        n_valid = int(df_safe[outcome_col].notna().sum())
+        if events is not None and n_valid > 0:
+            event_rate = round(events / n_valid, 4)
     n_cov = len(prereg.get("analysis_plan", {}).get("covariates", []))
     power = power_check(n, events or 0, n_cov) if events is not None else None
+    low_event = event_rate is not None and event_rate < 0.05
 
     # Verdict
     missing_critical = []
@@ -222,13 +242,17 @@ def main():
         "variable_mapping": mapping,
         "summary_statistics": summary,
         "power_check": power,
+        "event_rate": event_rate,
+        "low_event_warning": low_event,
         "verdict": verdict,
         "verdict_reason": reason,
+        "full_eda_delegation": "anthropic-skills:clinical-eda-report "
+                               "(결측 패턴·Little's MCAR·VIF·이상치·분포 플롯·상관 heatmap)",
         "auto_undetectable_warnings": [
             "Selection bias (referral pattern, registry entry criteria)",
             "Information bias (unblinded outcome assessment)",
             "Unmeasured confounding (variables absent from data)",
-            "Collider bias (DAG review needed — see data_dag.png)"
+            "Collider bias (DAG review needed — 사용자/도메인 검토 필요)"
         ]
     }
 
@@ -254,7 +278,13 @@ def main():
         status = "✅" if c else "⚠️ MISSING"
         md.append(f"- {v}: `{c}` {status}")
     if power:
-        md.append(f"\n## 검정력\n- N: {power['n']}, Events: {power['events']}, Covariates: {power['n_covariates']}\n- EPV: {power['epv']} ({power['verdict']})\n")
+        md.append(f"\n## 검정력\n- N: {power['n']}, Events: {power['events']}, Covariates: {power['n_covariates']}\n- EPV: {power['epv']} ({power['verdict']})")
+        if event_rate is not None:
+            flag = " ⚠️ 이벤트율 < 5% (희귀 결과 — Firth/exact 고려)" if low_event else ""
+            md.append(f"- 이벤트율: {event_rate:.1%}{flag}")
+        md.append("")
+    md.append("\n## 전체 EDA (위임)\n- 결측 패턴·Little's MCAR·VIF·이상치·분포·상관: "
+              "`anthropic-skills:clinical-eda-report` 로 생성 (data-inspect는 feasibility 판정에 집중)")
     md.append("\n## 자동 탐지 불가 — 사용자 검토 필수\n")
     for w in report["auto_undetectable_warnings"]:
         md.append(f"- [ ] {w}")
