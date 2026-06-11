@@ -26,7 +26,7 @@ LLM이 자유 생성하는 영역을 최소화:
 - **Methods**: prereg.json + irb_metadata + variable_mapping (필드 매핑)
 - **Results**: Phase 5 위임 스킬 결과(표·HR/OR+CI) + corrected_pvalues.json (수치는 LLM이 다시 쓰지 않음)
 - **References**: search_log + 사용자 명시 PMID만
-- **Discussion·Limitations**: 일부 자유 서술 허용하되 사용자 검토 필수
+- **Discussion·Limitations**: 일부 자유 서술 허용하되 사용자 검토 필수. **Discussion 초안은 Claude+Codex 이중 저자 협업으로 생성**(아래 전용 섹션) — Codex 부재 시 Claude 단독
 
 ### 3. Citation Grounding 계승 (비타협)
 모든 인용은 search_log.json의 PMID/DOI 또는 사용자 명시 입력만. 자유 생성 인용 거절. Phase 1과 동일.
@@ -36,6 +36,7 @@ Phase 5의 strobe_checklist.md를 manuscript에 매핑. 누락 항목 (예: Fund
 
 ### 5. ICMJE AI disclosure 자동 생성
 - AI 사용 사실을 Methods 또는 Acknowledgements에 명시 (ICMJE 2023 권고)
+- **사용한 AI 모두 명시** — Claude (Anthropic) 전 단계 + Codex (OpenAI)가 Discussion 협업에 사용된 경우 함께 disclosure (Codex 사용 시에만)
 - AI는 저자가 아님 — 저자 목록은 사용자 입력만
 - evolution_log 요약을 disclosure 보충 자료로 첨부 (선택)
 
@@ -58,6 +59,7 @@ Phase 5의 strobe_checklist.md를 manuscript에 매핑. 누락 항목 (예: Fund
     Introduction: search_log 인용 + research_opportunities gap
     Methods: prereg + irb_metadata + variable_mapping
     Results: Phase 5 위임 스킬 결과 + corrected_pvalues.json (수치 그대로)
+    Discussion: ★ Claude+Codex 이중 저자 협업 (아래 전용 섹션) → discussion_final.md
     References: search_log + 사용자 PMID
         ↓
 [5] STROBE 22항목 점검표 첨부 + 누락 항목 사용자 입력 요구
@@ -71,6 +73,64 @@ Phase 5의 strobe_checklist.md를 manuscript에 매핑. 누락 항목 (예: Fund
 
 ---
 
+## Discussion 이중 저자 협업 (Claude + Codex)
+
+Discussion 섹션은 LLM의 약점 영역(임상 가치 판단)이므로, **두 독립 AI(Claude·Codex)가 각자 초안을 쓰고 서로 교차 검토**하여 약점을 상호 보완한 뒤 Claude가 최종본을 종합한다. Codex가 없으면 자동으로 Claude 단독으로 마무리한다.
+
+### 흐름
+
+```
+[0] probe        codex 사용 가능? (discussion_collab.py probe)
+                  ├─ 불가 → 단독 모드로 분기 ([A2][B1][B2] 생략)
+                  └─ 가능 → 협업 모드
+[패킷] Claude가 grounded 입력 패킷 작성 → discussion/discussion_packet.md
+        (주요 결과 effect size+CI · 허용 인용 PMID/DOI 목록 · gap · Limitations 4항목)
+        ↓
+[A] 독립 초안 (동일 패킷)
+    A1 Claude 작성        → discussion/discussion_claude_v1.md   (agent)
+    A2 Codex 작성         → discussion/discussion_codex_v1.md    (codex-draft)
+        ↓
+[B] 교차 검토 (서로 바꿔서)
+    B1 Claude가 codex_v1 검토 → discussion/review_claude_on_codex.md  (agent)
+    B2 Codex가 claude_v1 검토 → discussion/review_codex_on_claude.md  (codex-review)
+        ↓
+[C] 종합 (Claude)
+    4개 산출물(두 초안 + 두 검토) → discussion/discussion_final.md
+    + 채택/기각 사유 기록        → discussion/discussion_merge_notes.md
+        ↓
+    discussion_final.md → manuscript .docx 의 Discussion 으로 삽입
+```
+
+### Codex 측 호출 (결정론적 헬퍼)
+
+```bash
+# 가용성 (exit 0=가능, 1=불가). --no-exec 는 바이너리만 빠르게 확인(인증 미확인)
+python ${CLAUDE_PLUGIN_ROOT}/skills/manuscript-writer/scripts/discussion_collab.py probe
+
+# A2: Codex 초안
+python ${CLAUDE_PLUGIN_ROOT}/skills/manuscript-writer/scripts/discussion_collab.py codex-draft \
+  --packet  workspace/{project}/phase6_manuscript/discussion/discussion_packet.md \
+  --out     workspace/{project}/phase6_manuscript/discussion/discussion_codex_v1.md
+
+# B2: Codex 교차 검토 (Claude 초안을 검토)
+python ${CLAUDE_PLUGIN_ROOT}/skills/manuscript-writer/scripts/discussion_collab.py codex-review \
+  --draft   workspace/{project}/phase6_manuscript/discussion/discussion_claude_v1.md \
+  --packet  workspace/{project}/phase6_manuscript/discussion/discussion_packet.md \
+  --out     workspace/{project}/phase6_manuscript/discussion/review_codex_on_claude.md
+```
+
+### 정책 (두 저자 공통)
+- **Citation Grounding 비타협**: 두 저자 모두 패킷의 허용 인용 목록 밖 인용 금지. discussion_final.md도 최종적으로 verify_citations.py를 통과해야 함.
+- **PHI 비전송 비타협**: 패킷에는 집계 통계만 담는다 (개별 환자 row·직접 식별자 금지). Codex 호출은 이 패킷을 OpenAI로 전송하므로, 패킷 작성 시 PHI 부재를 재확인.
+- **2차 vendor 고지**: Codex 사용 시 grounded 집계 내용이 **OpenAI에 전송**됨 → ai_disclosure.md에 Claude와 함께 Codex(OpenAI) 명시 (아래 disclosure).
+- **관찰연구 한계**: 두 저자 프롬프트에 인과 과대해석 금지·effect size+CI 유지 규칙이 주입됨.
+- **임상 가치 판단은 여전히 사용자**: 이중 AI는 *더 나은 초안*을 만들 뿐. discussion_final.md도 G6에서 사용자 직접 검토·재작성 권장 영역으로 유지.
+
+### Fallback (Codex 미가용)
+probe가 exit 1(미설치/미인증/런타임 실패)이면 [A2][B1][B2]를 생략하고 Claude가 단독으로 discussion_final.md를 작성한다. `discussion_collab_log.json`에 `mode: "claude_solo"`와 사유를 기록하고 evolution_log에 `DISCUSSION_CODEX_UNAVAILABLE`를 남긴다. **이 경우 disclosure에는 Codex를 명시하지 않는다.**
+
+---
+
 ## 출력 명세
 
 | 산출물 | 위치 | 의미 |
@@ -78,8 +138,9 @@ Phase 5의 strobe_checklist.md를 manuscript에 매핑. 누락 항목 (예: Fund
 | manuscript_draft.docx | `phase6_manuscript/manuscript_draft.docx` | IMRaD 초안 |
 | references.bib | `phase6_manuscript/references.bib` | BibTeX 참고문헌 |
 | strobe_22_check.md | `phase6_manuscript/strobe_22_check.md` | STROBE 22항목 점검표 |
-| ai_disclosure.md | `phase6_manuscript/ai_disclosure.md` | ICMJE AI 사용 명시 |
+| ai_disclosure.md | `phase6_manuscript/ai_disclosure.md` | ICMJE AI 사용 명시 (협업 시 Codex 포함) |
 | citation_check.json | `phase6_manuscript/citation_check.json` | verify_citations.py 인용 검증 결과 |
+| discussion/ | `phase6_manuscript/discussion/` | 이중 저자 협업 산출물 (packet·두 초안·두 검토·final·merge_notes·collab_log) |
 
 ---
 
@@ -115,6 +176,8 @@ Phase 5의 strobe_checklist.md를 manuscript에 매핑. 누락 항목 (예: Fund
 | LLM이 자유 생성 인용 시도 | **차단 (Citation Grounding 비타협)** |
 | LLM이 prereg 외 분석 결과 자유 생성 | **차단** — Results 수치는 위임 스킬 결과·corrected_pvalues.json에서만 |
 | Discussion에서 환각 의심 (인용 없는 임상 주장) | 경고 + 사용자 검토 강제 + LLM 작성 영역 명시 |
+| Codex 미가용 (미설치/미인증/타임아웃) | 차단 아님 — Claude 단독 모드로 fallback + evolution_log 기록 |
+| Codex 초안이 패킷 밖 인용 생성 | 종합 단계에서 제거 + discussion_final.md는 verify_citations.py 통과 필수 |
 | ICMJE AI disclosure 누락 | 차단, 자동 생성 강제 |
 | AI를 저자 목록에 포함 시도 | 차단 (ICMJE 정책 위반) |
 | 사용자가 STROBE 누락 항목 입력 거부 | 경고 + manuscript에 ⚠️ 표시 + evolution_log 기록 |

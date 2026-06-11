@@ -91,7 +91,7 @@ clinical-research-harness/
 │   │   │   └── references/{phase_gates.md, STROBE_checklist.md, citation_policy.md}
 │   │   ├── data-inspect/               # Phase 4 (+ eda.py)
 │   │   ├── stat-analysis/              # Phase 5 (+ run_analysis.py, prereg_check.py)
-│   │   ├── manuscript-writer/          # Phase 6 IMRaD 초안
+│   │   ├── manuscript-writer/          # Phase 6 IMRaD 초안 (Discussion: Claude+Codex 협업 + discussion_collab.py)
 │   │   └── peer-review/                # Phase 7 자체 동료검토 (신규)
 │   └── agents/
 │       ├── data-inspector.md
@@ -112,7 +112,7 @@ clinical-research-harness/
 ## 3대 비타협 정책 (우회 불가)
 
 1. **Citation Grounding** — 모든 인용은 도구가 반환한 PMID/DOI 또는 사용자 명시 입력만. 자유 생성 인용 거절. (계획: lit-search / 분석: manuscript·peer-review)
-2. **PHI 행 비전송** — 개별 환자 row는 어떤 경우에도 LLM 컨텍스트로 전달되지 않음. 직접 식별자(실명·생년월일·주민번호) 자동 마스킹. (분석: data-inspect)
+2. **PHI 행 비전송** — 개별 환자 row는 어떤 경우에도 LLM 컨텍스트로 전달되지 않음. 직접 식별자(실명·생년월일·주민번호) 자동 마스킹. (분석: data-inspect) 이는 Phase 6 Discussion의 Claude+Codex 협업에도 동일 적용 — Codex로는 집계 통계만 전송.
 3. **effect size + 95% CI 강제** — p-value 단독 보고 거절. (분석: stat-analysis)
 
 그 외 IRB·HARKing은 informed-consent + 자동 로깅 모델 (차단 아님). 특히 **분석 하네스는 IRB 무관 독립 실행**이며 IRB 책임은 전적으로 사용자에게 있습니다.
