@@ -2,7 +2,7 @@
 name: manuscript-writer
 description: Phase 5의 분석 결과 + Phase 2 사전등록 + Phase 1 문헌 결과를 통합하여 IMRaD 구조의 학술지 투고용 논문 초안(.docx)을 자동 생성. anthropic-skills:docx 시스템 스킬을 wrapper로 활용. STROBE 22항목 자동 충족 점검 + ICMJE AI 사용 disclosure 자동 생성. Phase 6 전용. "논문 초안", "manuscript", "IMRaD", "투고", "draft"를 언급할 때 사용.
 tools: Read, Write, Edit, Bash, Skill
-model: sonnet
+model: opus
 ---
 
 # Manuscript Writer Agent

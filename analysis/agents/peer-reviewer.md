@@ -2,7 +2,7 @@
 name: peer-reviewer
 description: 투고 전 완성 원고를 5개 렌즈(방법·통계 / 임상의의·외적타당도 / STROBE 보고 / 인과·편향 / 인용근거)의 가상 reviewer 패널로 적대적으로 비판해 약점을 사전 발견. 실제 학술지 심사가 아닌 투고 전 리허설. Phase 7 전용. "동료검토", "peer review", "투고 전 검토", "내 논문 약점", "reviewer가 뭐라 할까"를 언급할 때 사용.
 tools: Read, Write, Edit, Bash, Glob, Skill
-model: sonnet
+model: opus
 ---
 
 # Peer Reviewer Agent (투고 전 자체 적대적 검토)

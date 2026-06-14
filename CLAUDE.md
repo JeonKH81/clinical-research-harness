@@ -9,21 +9,13 @@
 
 ---
 
-## 자연어 라우팅 (요약)
+## 트리거 규칙 (요약)
 
-| 사용자 발화 | 하네스 / Phase |
-|---|---|
-| "연구 시작", "이 주제로 연구하고 싶다" | 계획 — Phase 0 |
-| "문헌", "선행연구", "gap", "replication", "external validation" | 계획 — Phase 1 |
-| "가설 PICO로 정리", "사전등록" | 계획 — Phase 2 |
-| "연구계획서", "IRB 제출", "프로토콜" | 계획 — Phase 3 |
-| "데이터 받았다", "검정 가능한가", "표본 크기", "EDA" | 분석 — Phase 4 |
-| "분석 돌려줘", "Cox", "생존분석", "Table 1" | 분석 — Phase 5 |
-| "논문 초안", "manuscript", "IMRaD", "투고", "draft" | 분석 — Phase 6 |
-| "동료검토", "투고 전 검토", "reviewer가 뭐라 할까", "약점 찾아줘" | 분석 — Phase 7 |
-| "가설 바꾸자" (기록 후) | 차단 → amendment 절차 안내 |
+- **계획 관련** 발화(연구 시작·문헌·가설·사전등록·연구계획서·IRB)는 `planning-orchestrator`가 처리 — Phase 0–3.
+- **분석 관련** 발화(데이터·검정·Cox·생존분석·Table 1·논문초안·동료검토)는 `analysis-orchestrator`가 처리 — Phase 4–7.
+- "가설 바꾸자"(기록 후)는 amendment 절차로 안내. 분류가 모호하면 명확화 질문, 범위 밖이면 다른 플러그인 사용을 안내합니다.
 
-분류가 모호하면 해당 orchestrator가 명확화 질문을 합니다. 한 하네스 범위 밖 요청이면 다른 플러그인 사용을 안내합니다.
+> **전체 키워드·Phase별 라우팅의 단일 출처는 각 orchestrator의 `SKILL.md`입니다.** 라우팅을 바꾸려면 이 요약이 아니라 해당 `SKILL.md`를 고치세요.
 
 ---
 
@@ -41,18 +33,9 @@
 
 ## 게이트 (Human-in-the-loop)
 
-| Gate | 위치 | 확인 사항 |
-|---|---|---|
-| G0 | 계획 Phase 0 | IRB 범위·PHI 정책·학술 책임 |
-| G1 | 계획 Phase 1 | 9개 연구 기회 후보 중 선택 |
-| G2 | 계획 Phase 2 | 사전등록 기록 (자유 변경 + 자동 로깅) |
-| G3 | 계획 Phase 3 | 연구계획서 검토 + IRB 상태 입력 |
-| G4 | 분석 Phase 4 | Feasibility verdict + 자동탐지 불가 4항목 |
-| G5 | 분석 Phase 5 | 임상 해석·PH 가정·민감도 (IRB 점검 없음) |
-| G6 | 분석 Phase 6 | IMRaD·STROBE·Discussion·ICMJE disclosure |
-| G7 | 분석 Phase 7 | 자체 동료검토 결과 검토 → 수정/투고 준비 |
+계획·분석 각 Phase 종료 시 사용자 명시 승인 게이트(G0–G7)가 있으며, 승인 없이는 다음 Phase로 진행하지 않습니다.
 
-각 게이트에서 사용자 명시 승인 없이는 다음 Phase로 진행하지 않습니다.
+> **각 게이트의 검증 항목·통과/실패 처리의 단일 출처는 각 플러그인의 `references/phase_gates.md`입니다**(계획 = G0–G3, 분석 = G4–G7). 게이트 정책을 바꾸려면 그 파일을 고치세요.
 
 **범위 밖**: Phase 8(실제 심사 대응·재투고)은 본 하네스 밖 — 사용자 직접 처리.
 
@@ -76,3 +59,17 @@
 - 플러그인 레이아웃: 각 플러그인은 `<plugin>/.claude-plugin/plugin.json` + `<plugin>/skills/<skill>/SKILL.md` + `<plugin>/agents/*.md`. 스킬 내부 cross-skill 참조는 `${CLAUDE_PLUGIN_ROOT}/skills/...` 경로 사용.
 - 분석 하네스는 계획 하네스에 의존하지 않음 — 사전등록 무결성 검증은 자체 `analysis/skills/stat-analysis/scripts/prereg_check.py` 사용.
 - 설계 문서: `Clinical_Research_Harness_v1_0_Final.docx`
+
+---
+
+## 변경 이력
+
+하네스 자체(에이전트·스킬·정책)의 변경을 기록합니다. (프로젝트별 분석 로그는 각 `workspace/{project}/evolution_log.md`에 별도 기록)
+
+| 날짜 | 변경 내용 | 대상 | 사유 |
+|---|---|---|---|
+| 2026-06-14 | 오케스트레이터에 테스트 시나리오(정상+에러) 섹션 추가 | planning/analysis orchestrator SKILL.md | 회귀 점검 기준 부재 |
+| 2026-06-14 | description에 후속·재작업 키워드 추가 | planning/analysis orchestrator | "다시 해줘" 재실행 요청 미트리거 방지 |
+| 2026-06-14 | 전체 에이전트(7개) 모델 sonnet→opus 통일 | planning/analysis agents | 하네스 품질은 추론력에 직결 (harness 원칙) |
+| 2026-06-14 | citation_policy 두 사본에 동기화 주의 표시 | 양 플러그인 references | 정책 드리프트 방지 |
+| 2026-06-14 | CLAUDE.md 라우팅·게이트표를 포인터로 축약 | CLAUDE.md | 단일 출처 중복 제거 |

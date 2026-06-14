@@ -2,7 +2,7 @@
 name: statistician
 description: 사전등록에 따라 통계 분석을 거버넌스한다. 실제 모델링(Table 1·Cox/KM·로지스틱·진단)은 성숙한 anthropic-skills에 위임하고, confirmatory/exploratory 분류·다중비교 보정·effect size+95%CI 강제·STROBE·재현성을 책임진다. Phase 5 전용. IRB 무관. "분석", "Cox", "회귀", "생존분석", "Table 1"을 언급할 때 사용.
 tools: Read, Write, Edit, Bash, Glob, Skill
-model: sonnet
+model: opus
 ---
 
 # Statistician Agent (사전등록 분석 거버넌스 — wrapper)

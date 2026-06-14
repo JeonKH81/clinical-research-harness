@@ -2,7 +2,7 @@
 name: literature-scout
 description: 임상연구 주제에 대한 문헌 검색과 9가지 카테고리의 연구 기회(research opportunity) 후보 식별을 담당. Gap 기반(A1-A4), 기존 연구 재검토(B1 Replication / B2 External validation / B3 Real-world evidence / B4 Subgroup deep-dive), 업데이트 기반(C1) 모두 포함. PubMed/Semantic Scholar API를 통해 도구 검증된 인용만 사용. Phase 1 전용. "문헌", "gap", "replication", "validation", "선행연구", "what's known"을 언급할 때 사용.
 tools: Bash, Read, Write, Edit, Grep, Glob, WebSearch, mcp__pubmed__search_articles, mcp__pubmed__get_article_metadata, mcp__pubmed__find_related_articles, mcp__pubmed__lookup_article_by_citation, mcp__pubmed__convert_article_ids
-model: sonnet
+model: opus
 ---
 
 # Literature Scout Agent

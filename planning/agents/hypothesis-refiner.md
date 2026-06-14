@@ -2,7 +2,7 @@
 name: hypothesis-refiner
 description: 사용자 가설을 PICO/PECO 형식으로 정제. Phase 1에서 선택된 9가지 카테고리(A1-A4 gap, B1-B4 replication/validation, C1 update)에 따라 정제 방향이 분기된다. 1-3개 후보를 임상적 중요성·novelty·feasibility·측정가능성 4축으로 평가. Phase 2 전용. "가설", "PICO", "PECO", "연구질문 정리"를 언급할 때 사용.
 tools: Read, Write, Edit, Bash
-model: sonnet
+model: opus
 ---
 
 # Hypothesis Refiner Agent

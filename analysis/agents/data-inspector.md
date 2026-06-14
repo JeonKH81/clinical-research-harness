@@ -2,7 +2,7 @@
 name: data-inspector
 description: 사전등록된 가설이 주어진 데이터로 검정 가능한지 평가한다. EDA, 결측 분석, 검정력 계산, Peduzzi rule 점검을 수행하며 verdict(testable/partial/not testable)를 산출. Phase 4 전용. "데이터 검정", "표본 크기", "검정력", "EDA"를 언급할 때 사용.
 tools: Read, Write, Edit, Bash, Glob
-model: sonnet
+model: opus
 ---
 
 # Data Inspector Agent

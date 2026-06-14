@@ -2,7 +2,7 @@
 name: protocol-writer
 description: 잠긴 사전등록(prereg.json)을 입력으로 IRB 제출용 한국어 연구계획서(.docx)를 자동 생성한다. anthropic-skills:research-protocol-writer 스킬을 호출하며, 전기현 교수 표준 IRB 템플릿을 따른다. Phase 3 전용. "연구계획서", "IRB 제출", "프로토콜 작성"을 언급할 때 사용.
 tools: Read, Write, Edit, Bash, Skill
-model: sonnet
+model: opus
 ---
 
 # Protocol Writer Agent

@@ -1,6 +1,6 @@
 ---
 name: analysis-orchestrator
-description: 임상연구 "분석·집필 하네스"의 진입점. Phase 4–7 (데이터 검정가능성 → 통계분석 → IMRaD 논문초안 → 투고 전 자체 적대적 동료검토) 라우팅과 게이트 G4–G7을 강제한다. "데이터 받았다", "분석 돌려줘", "Cox", "생존분석", "Table 1", "논문 초안", "manuscript", "동료검토", "투고 전 검토" 같은 자연어에서 자동 호출. IRB 무관 독립 실행. 계획·문헌·사전등록은 별도 clinical-research-planning 플러그인이 담당.
+description: 임상연구 "분석·집필 하네스"의 진입점. Phase 4–7 (데이터 검정가능성 → 통계분석 → IMRaD 논문초안 → 투고 전 자체 적대적 동료검토) 라우팅과 게이트 G4–G7을 강제한다. "데이터 받았다", "분석 돌려줘", "Cox", "생존분석", "Table 1", "논문 초안", "manuscript", "동료검토", "투고 전 검토", 그리고 "다시 분석", "재분석", "다시 돌려줘", "업데이트", "이전 결과 기반", "이어서" 같은 후속·재작업 요청을 포함한 자연어에서 자동 호출. IRB 무관 독립 실행. 계획·문헌·사전등록은 별도 clinical-research-planning 플러그인이 담당.
 license: MIT
 ---
 
@@ -137,6 +137,24 @@ IRB·HARKing은 informed-consent + 자동 로깅 모델 (차단 아님).
 ## Evolution 로깅
 
 모든 게이트 결정·자동 탐지·override는 `workspace/{project}/evolution_log.md`에 누적 (계획 하네스 로그에 이어서 기록).
+
+## 테스트 시나리오
+
+오케스트레이터 동작이 깨지지 않았는지 점검하는 기준 흐름입니다. 코드 수정 후 아래대로 동작하는지 확인하십시오.
+
+**정상 흐름 (happy path):**
+1. prereg.json이 있는 `workspace/{project}/`에서 "데이터 받았다, 분석 가능한지 봐줘" → Phase 4 진입
+2. data-inspector가 verdict(testable) 산출 → G4 승인 → variable_mapping.json 확정
+3. "분석 돌려줘" → Phase 5 통계(Table 1·1차·민감도), 모든 추정치 effect size + 95% CI 동반 → G5 승인
+4. "논문 초안 써줘" → Phase 6 IMRaD .docx(STROBE 22항목·ICMJE disclosure) → G6 검토
+5. "투고 전 검토해줘" → Phase 7 가상 reviewer 5개 렌즈 비판 → G7 수정/투고 준비 결정
+
+**에러 흐름 (반드시 이렇게 동작해야 함):**
+- **prereg.json 없음**: 계획 하네스 산출물 또는 사용자 직접 prereg가 필요함을 안내. 그래도 진행 시 **모든 분석이 exploratory로 처리**됨을 명시
+- **verdict = not testable**: G4에서 차단하지 않되 4지선다(대안 질문 / 데이터 보완 / 중단 / 강행) 제시. 강행 시 informed-consent + 로깅 + "약한 근거" 명시
+- **사전등록 해시 드리프트**: prereg.json이 바뀜 → **차단하지 않고** 경고 + evolution_log에 PREREG_HASH_DRIFT 자동 기록(Soft 모델)
+- **p-value 단독 보고 요청**: "p값만 보여줘" → 거절(effect size + 95% CI 비타협)
+- **범위 밖 요청**: "문헌 찾아줘" / "연구계획서 써줘" / "IRB" → 이 플러그인 범위 밖 안내 + `clinical-research-planning` 플러그인 사용 권고
 
 ## 참고 자료
 - `references/phase_gates.md` (G4–G7)
