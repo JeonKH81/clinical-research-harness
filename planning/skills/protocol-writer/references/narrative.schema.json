@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "narrative.json — protocol prose overlay",
+  "description": "protocol-writer 에이전트가 채우는 prose 오버레이. 구조적 필드(가설/분석/결과변수)는 prereg.json이 SSOT이므로 여기 중복 기입하지 않는다. 아래는 prose와 prereg에 없는 보강 정보만.",
+  "type": "object",
+  "properties": {
+    "title_ko": {"type": "string", "description": "국문 제목"},
+    "title_en": {"type": "string", "description": "영문 제목"},
+    "version": {"type": "string", "default": "1.0"},
+    "date": {"type": "string", "description": "예: 2026년 6월 28일"},
+    "study_period": {"type": "string", "description": "예: IRB 승인 후 ~ 2026년 12월 31일"},
+    "study_type": {"type": "string", "enum": ["observational", "trial"], "description": "self_review의 STROBE/SPIRIT 분기. 미기입 시 prereg.design에서 자동 추론"},
+    "pi": {
+      "type": "object",
+      "description": "researcher_profile.json로 대체 가능. 둘 다 있으면 narrative 우선",
+      "properties": {
+        "name": {"type": "string"}, "title": {"type": "string"},
+        "dept": {"type": "string"}, "email": {"type": "string"}
+      }
+    },
+    "institution": {"type": "string", "description": "소속 기관명"},
+    "co_investigators": {"type": "array", "items": {"type": "string"}},
+    "outline": {
+      "type": "object",
+      "description": "Protocol Outline 요약표. 미기입 항목은 본문에서 자동 도출",
+      "properties": {
+        "purpose": {"type": "string"}, "subjects": {"type": "string"},
+        "methods": {"type": "string"}, "expected": {"type": "string"}
+      }
+    },
+    "background": {"type": "string", "description": "연구 배경 및 목적(2장). 여러 문단은 \\n로 구분. in-text 인용은 [n] 형식이며 n은 references 번호와 일치해야 함(verify_citations가 강제)"},
+    "objectives": {
+      "type": "object",
+      "properties": {
+        "primary": {"type": "string"},
+        "secondary": {"type": "array", "items": {"type": "string"}},
+        "expected": {"type": "string", "description": "기대효과"}
+      }
+    },
+    "design_narrative": {"type": "string", "description": "연구 설계 서술(5장 1절)"},
+    "subjects": {
+      "type": "object",
+      "properties": {
+        "inclusion": {"type": "array", "items": {"type": "string"}},
+        "exclusion": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "data_collection": {"type": "string", "description": "데이터 수집/전처리 서술. 미기입 시 prereg.data_provenance에서 자동 생성"},
+    "ai_algorithm": {"type": ["string", "null"], "description": "AI 알고리즘 연구일 때만. null이면 섹션 생략"},
+    "statistics_extra": {"type": "string", "description": "prereg.analysis_plan 외 추가 통계 서술"},
+    "sample_size": {"type": "string", "description": "표본 수 산출 문구. 미기입 시 sample_size.py --from-prereg 결과 자동 삽입"},
+    "ethics": {
+      "type": "object",
+      "description": "윤리 8개 소항목 override. 미기입 항목은 기관 표준 기본문구 사용",
+      "properties": {
+        "protection": {"type": "string"}, "irb_class": {"type": "string"},
+        "privacy": {"type": "string"}, "helsinki": {"type": "string"},
+        "retention": {"type": "string"}, "ai_disclosure": {"type": "string"},
+        "coi": {"type": "string"}, "dissemination": {"type": "string"}
+      }
+    },
+    "references": {
+      "type": "array",
+      "description": "Vancouver 형식 참고문헌. 반드시 search_log.json에 PMID/DOI로 실재해야 함(Citation Grounding). 미기입 시 search_log 전체를 자동 변환",
+      "items": {
+        "type": "object",
+        "properties": {
+          "n": {"type": "integer"}, "text": {"type": "string"},
+          "pmid": {"type": "string"}, "doi": {"type": "string"}
+        },
+        "required": ["n", "text"]
+      }
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "clinical-research-analysis",
+  "version": "2.0.1",
+  "description": "임상연구 분석·집필 하네스 (Phase 4–7): 데이터 검정가능성(EDA·검정력·Peduzzi, PHI 행 비전송) → 사전등록 기반 통계분석(confirmatory/exploratory 자동분리, effect size+95%CI) → IMRaD 논문초안(.docx, STROBE·ICMJE) → 투고 전 자체 적대적 동료검토. 게이트 G4–G7. IRB 무관 독립 실행.",
+  "author": {
+    "name": "JeonKH81",
+    "email": "JeonKH81@users.noreply.github.com"
+  },
+  "homepage": "https://github.com/JeonKH81/clinical-research-harness",
+  "repository": "https://github.com/JeonKH81/clinical-research-harness",
+  "license": "MIT",
+  "keywords": [
+    "clinical-research",
+    "cardiology",
+    "statistics",
+    "survival-analysis",
+    "cox-regression",
+    "STROBE",
+    "manuscript",
+    "peer-review",
+    "IMRaD"
+  ]
+}

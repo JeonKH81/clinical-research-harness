@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "clinical-research-planning",
+  "description": "임상연구 계획 하네스 — 단일 플러그인 마켓플레이스(zip 단독 설치용). 이 디렉토리(.) 자체가 플러그인이다.",
+  "version": "2.0.1",
+  "owner": {
+    "name": "JeonKH81",
+    "email": "JeonKH81@users.noreply.github.com"
+  },
+  "plugins": [
+    {
+      "name": "clinical-research-planning",
+      "source": ".",
+      "description": "하네스 1 — 연구 계획 (Phase 0–3): Intake → 문헌검색 → 가설 PICO 정제·사전등록 → IRB 연구계획서(.docx). 게이트 G0–G3.",
+      "version": "2.0.1",
+      "author": { "name": "JeonKH81", "email": "JeonKH81@users.noreply.github.com" },
+      "homepage": "https://github.com/JeonKH81/clinical-research-harness",
+      "repository": "https://github.com/JeonKH81/clinical-research-harness",
+      "license": "MIT",
+      "keywords": ["clinical-research", "cardiology", "literature-search", "pubmed", "pre-registration", "IRB", "protocol"]
+    }
+  ]
+}

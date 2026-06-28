@@ -1,0 +1,11 @@
+{
+  "_comment": "PI/기관 메타데이터 재사용 파일(예시 — 실제 값으로 채워 ~/.clinical-research-harness/researcher_profile.json 에 두십시오). 프로젝트마다 책임연구자·기관을 다시 묻지 않기 위함(질문 최소화). build_protocol.py --profile 로 전달. 이 example 파일에는 실제 개인정보를 넣지 마십시오(공개 저장소 포함). narrative.json의 pi가 있으면 그쪽이 우선.",
+  "institution": "(소속 기관)",
+  "pi": {
+    "name": "(연구책임자 성명)",
+    "title": "(직위)",
+    "dept": "(진료과)",
+    "email": "(이메일)"
+  },
+  "co_investigators": []
+}
