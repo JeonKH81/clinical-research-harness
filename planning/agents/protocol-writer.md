@@ -35,13 +35,16 @@ python ${CLAUDE_PLUGIN_ROOT}/skills/prereg-lock/scripts/lock.py verify --project
 ### 2. narrative.json 작성 (당신의 유일한 창작 영역)
 prereg 구조 필드는 건드리지 말고 prose만 작성: `background`(in-text [n] 인용은 search_log PMID 문헌만), `objectives`, `design_narrative`, `subjects.inclusion/exclusion`, `data_collection`, (해당 시)`ai_algorithm`, `title_ko/en`, `study_period`, `references`. 스키마는 `skills/protocol-writer/references/narrative.schema.json`.
 
-### 3. .docx 생성
+### 3. .docx 생성 (표본 수 자동 포함)
 ```bash
 python ${CLAUDE_PLUGIN_ROOT}/skills/protocol-writer/scripts/build_protocol.py \
   --prereg {prereg.json} --narrative {narrative.json} --refs {search_log.json} \
   --profile ~/.clinical-research-harness/researcher_profile.json \
   --outdir {phase3_protocol} --auto-sample-size
 ```
+표본 수: 번들 `sample_size.py`가 9개 설계(생존·두비율·두평균·단일비율정밀도·McNemar·ANOVA·로지스틱·비열등성×2)를 자체 산출. 흔한 설계는 위 `--auto-sample-size`로 자동. 복잡 설계는 직접 호출(`sample_size.py --design ...`) 후 `narrative.sample_size`에 주입.
+
+**번들 범위 밖(ICC/κ 일치도, TOST 동등성 등)**: available-skills 목록에 `calc-sample-size`가 **있으면** Skill 도구로 호출해 결과를 `narrative.sample_size`에 주입; **없으면** 사용자에게 수동 입력 또는 medsci-skills 설치를 안내. calc-sample-size는 hard dependency가 아니므로 **호출 전 존재를 먼저 확인**할 것(없어도 protocol-writer는 정상 동작).
 
 ### 4. 자동 검증 (G3 진입 전 필수, 둘 다 통과해야 함)
 ```bash

@@ -11,7 +11,7 @@ license: MIT
 
 ## v2 고도화 요약 (이전 wrapper 대비)
 - **자체화**: `anthropic-skills:research-protocol-writer`(앱 내장 시스템 스킬) 위임을 제거. `scripts/build_protocol.py`가 python-docx만으로 동일 템플릿을 직접 렌더링 → 시스템 스킬 미설치 환경에서도 단독 동작.
-- **표본 수 자동 산출**: `scripts/sample_size.py`가 prereg의 effect_size_assumption에서 생존(Schoenfeld)/비율/평균 설계별 표본 수와 IRB 문구를 자동 생성. narrative.sample_size 비면 자동 삽입.
+- **표본 수 자동 산출**: `scripts/sample_size.py`가 9개 설계(생존·두비율·두평균·단일비율정밀도/진단정확도·McNemar·ANOVA·로지스틱·비열등성 비율/평균)를 scipy만으로 자체 산출 + IRB 문구 생성. 흔한 3종은 prereg에서 자동 삽입. 번들이라 외부 스킬 없이 동작하며, 범위 밖 설계는 선택적으로 `calc-sample-size` 위임(아래 참조).
 - **자기검증 게이트**: `scripts/self_review.py`가 study_type에 따라 STROBE(관찰)/SPIRIT(시험) 핵심 항목을 PRESENT/PARTIAL/MISSING으로 점검, 필수 누락 시 NEEDS_WORK.
 - **Citation Grounding 강제(코드)**: `scripts/verify_citations.py`가 모든 참고문헌·in-text [n]을 search_log.json과 대조, 미실재 시 exit 2(BLOCK).
 - **질문 최소화**: `references/researcher_profile.example.json`로 PI/기관 메타를 재사용 — 프로젝트마다 책임연구자를 다시 묻지 않음.
@@ -89,6 +89,19 @@ self_review.md 요약과 함께 .docx를 제시. 4지선다로 irb_status 갱신
 | 면제(exempt/IRB 불필요) | `exempt` | 면제 사유 입력. 인계 |
 | 제출됨/미제출 | `submitted`/`pending_submission` | 상태 기록. 분석은 IRB 무관·사용자 책임 |
 | 수정 필요 | 변동 없음 | narrative/prereg 보완 후 재호출 |
+
+## 표본 수 산출 — 번들 우선 + 선택적 위임 (이식성 보장)
+
+`sample_size.py`는 harness에 **번들**돼 있어 medsci-skills 설치 여부와 무관하게 누구에게나 동작합니다(공개 배포 안전).
+
+**번들로 자체 처리되는 설계** (scipy만 사용):
+survival(log-rank/Cox), two-proportion, two-mean, precision-proportion(단일비율 CI·진단정확도 Buderer), mcnemar(짝지은 이진), anova(일원), logistic(Peduzzi EPV / Hsieh), ni-proportion, ni-mean(비열등성).
+
+**번들 범위를 벗어나는 설계** (ICC/κ 일치도, TOST 동등성 등):
+1. **`calc-sample-size` 스킬이 available-skills 목록에 있으면** 그것으로 산출 후 결과 문구를 `narrative.sample_size`에 주입.
+2. **없으면** (= harness만 설치한 외부 사용자): ① 사용자가 표본수 문구를 `narrative.sample_size`에 직접 입력하도록 안내, 또는 ② "medsci-skills 설치 시 자동 지원" 안내.
+
+> **비-의존 원칙**: `calc-sample-size`는 hard dependency가 **아님**. 에이전트는 호출 **전에** available-skills 목록으로 존재를 확인하고 분기한다(호출 실패에 의존하지 않음). 외부 스킬 부재로 protocol-writer가 깨지지 않는다.
 
 ## 핵심 정책
 
